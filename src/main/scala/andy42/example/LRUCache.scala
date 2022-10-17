@@ -44,8 +44,8 @@ case class LRUCacheLive[K, V](
 
   def moveWatermarkForward(watermark: AccessTime, now: AccessTime): AccessTime =
     val intervals = now - watermark + 1
-    val moveForwardBy = 1 max (intervals * config.fractionToDropOnTrim).toInt
-    watermark + moveForwardBy
+    val moveForwardBy = 1L max (intervals * config.fractionToDropOnTrim).toLong
+    now min (watermark + moveForwardBy)
 
 object LRUCache:
   def make[K, V]: URIO[LRUCacheConfig, LRUCache[K, V]] =
@@ -53,5 +53,5 @@ object LRUCache:
       config <- ZIO.service[LRUCacheConfig]
       items <- TMap.empty[K, CacheItem[V]].commit
       now <- Clock.currentTime(MILLIS)
-      watermark <- TRef.make(now - 1).commit
+      watermark <- TRef.make(now).commit
     yield LRUCacheLive[K, V](config, items, watermark)
